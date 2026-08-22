@@ -1,0 +1,16 @@
+{
+  "name": "sentinel-ai-assistant",
+  "private": true,
+  "version": "1.0.0",
+  "description": "SENTINEL — a voice-first AI operations assistant (OpenAI + ElevenLabs).",
+  "scripts": {
+    "install:all": "npm install --prefix server && npm install --prefix client",
+    "dev": "concurrently -n server,client -c blue,green \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
+    "build": "npm run build --prefix client && npm run build --prefix server",
+    "start": "npm run start --prefix server",
+    "typecheck": "npm run typecheck --prefix server && (cd client && npx tsc --noEmit -p tsconfig.app.json)"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.5"
+  }
+}
