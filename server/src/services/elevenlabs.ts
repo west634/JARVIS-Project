@@ -18,6 +18,12 @@ export class ElevenLabsError extends Error {
  * audio starts reaching the browser before ElevenLabs finishes generating it.
  */
 export async function synthesizeSpeechStream(options: SpeakOptions): Promise<Response> {
+  if (!config.ttsConfigured || !config.elevenLabsApiKey || !config.elevenLabsVoiceId) {
+    throw new ElevenLabsError(
+      "ElevenLabs isn't configured on the server. Add ELEVENLABS_API_KEY and ELEVENLABS_VOICE_ID to .env, or switch to the free Browser Voice in Settings."
+    );
+  }
+
   const text = options.text.trim();
   if (!text) {
     throw new ElevenLabsError("No text provided for speech synthesis.");

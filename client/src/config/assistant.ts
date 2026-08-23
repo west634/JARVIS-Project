@@ -10,6 +10,7 @@ export const DEFAULT_SETTINGS: AssistantSettings = {
   wakeWordEnabled: true,
   theme: "abyss",
   voiceOutputEnabled: true,
+  voiceProvider: "browser",
 };
 
 export const SETTINGS_STORAGE_KEY = "sentinel.settings.v1";

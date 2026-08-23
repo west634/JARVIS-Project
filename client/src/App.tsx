@@ -19,15 +19,17 @@ export default function App() {
   const assistant = useAssistant();
   const { environment, perimeter } = useSimulatedTelemetry();
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [ttsConfigured, setTtsConfigured] = useState(false);
 
-  // Pull the display name from the backend once; the operator's own override
-  // in Settings always takes precedence once they've set one.
+  // Pull the display name and voice-service status from the backend once;
+  // the operator's own name override in Settings always takes precedence.
   useEffect(() => {
     fetchAssistantConfig()
-      .then(({ assistantName }) => {
+      .then(({ assistantName, ttsConfigured }) => {
         assistant.setSettings((prev) =>
           prev.assistantName === "SENTINEL" ? { ...prev, assistantName } : prev
         );
+        setTtsConfigured(ttsConfigured);
       })
       .catch(() => {
         /* backend unreachable — fall back to the default name */
@@ -101,6 +103,7 @@ export default function App() {
         onClearHistory={assistant.clearHistory}
         onClose={() => setSettingsOpen(false)}
         notesCount={assistant.notes.length}
+        ttsConfigured={ttsConfigured}
       />
     </div>
   );

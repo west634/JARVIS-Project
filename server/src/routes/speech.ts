@@ -38,8 +38,12 @@ speechRouter.post("/speech", async (req, res) => {
     res.end();
   } catch (err) {
     if (err instanceof ElevenLabsError) {
-      const status = err.status === 401 ? 502 : 502;
-      res.status(status).json({ error: "The voice service could not synthesize speech right now." });
+      const status = err.status ? 502 : 400;
+      res.status(status).json({
+        error: err.status
+          ? "The voice service could not synthesize speech right now."
+          : err.message,
+      });
       return;
     }
     res.status(500).json({ error: "Unexpected error while synthesizing speech." });

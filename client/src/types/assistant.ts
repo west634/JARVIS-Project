@@ -35,6 +35,8 @@ export interface NoteEntry {
   createdAt: number;
 }
 
+export type VoiceProvider = "browser" | "elevenlabs";
+
 export interface AssistantSettings {
   assistantName: string;
   responseStyle: ResponseStyle;
@@ -42,10 +44,11 @@ export interface AssistantSettings {
   wakeWordEnabled: boolean;
   theme: "abyss" | "daylight";
   voiceOutputEnabled: boolean;
+  voiceProvider: VoiceProvider;
 }
 
 export interface SubsystemStatus {
   speechRecognition: "ONLINE" | "OFFLINE" | "UNAVAILABLE";
   wakeWordEngine: "ARMED" | "IDLE" | "UNAVAILABLE";
-  voiceSynthesis: "ONLINE" | "DEGRADED" | "OFFLINE";
+  voiceSynthesis: "ONLINE" | "DEGRADED" | "OFFLINE" | "UNAVAILABLE";
 }

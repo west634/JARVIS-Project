@@ -8,7 +8,10 @@ import { toolDefinitions, toolExecutors, isToolName } from "../tools/index.js";
 import type { PendingAction } from "../tools/types.js";
 import { buildSystemPrompt, type ResponseStyle } from "../assistant/persona.js";
 
-const client = new OpenAI({ apiKey: config.openaiApiKey });
+const client = new OpenAI({
+  apiKey: config.openaiApiKey,
+  ...(config.openaiBaseUrl ? { baseURL: config.openaiBaseUrl } : {}),
+});
 
 export interface ChatStreamCallbacks {
   onDelta: (text: string) => void;

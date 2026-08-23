@@ -17,12 +17,27 @@ function required(name: string): string {
   return value;
 }
 
+function optional(name: string): string | undefined {
+  const value = process.env[name];
+  return value && value.trim() !== "" ? value : undefined;
+}
+
+const elevenLabsApiKey = optional("ELEVENLABS_API_KEY");
+const elevenLabsVoiceId = optional("ELEVENLABS_VOICE_ID");
+
 export const config = {
   port: Number(process.env.PORT) || 8787,
+  // "OPENAI_API_KEY" also accepts a free Google Gemini key when OPENAI_BASE_URL
+  // is pointed at Gemini's OpenAI-compatible endpoint — see .env.example.
   openaiApiKey: required("OPENAI_API_KEY"),
+  openaiBaseUrl: optional("OPENAI_BASE_URL"),
   openaiModel: process.env.OPENAI_MODEL || "gpt-4o-mini",
-  elevenLabsApiKey: required("ELEVENLABS_API_KEY"),
-  elevenLabsVoiceId: required("ELEVENLABS_VOICE_ID"),
+  // ElevenLabs is optional: the client defaults to the browser's free built-in
+  // voice and only calls /api/speech if the operator switches to ElevenLabs
+  // in Settings, so the server shouldn't refuse to start without it.
+  elevenLabsApiKey,
+  elevenLabsVoiceId,
+  ttsConfigured: Boolean(elevenLabsApiKey && elevenLabsVoiceId),
 };
 
 export function describeConfigError(err: unknown): string {

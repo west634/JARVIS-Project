@@ -13,7 +13,7 @@ export interface ChatStreamOutcome {
 
 export class ApiError extends Error {}
 
-export async function fetchAssistantConfig(): Promise<{ assistantName: string }> {
+export async function fetchAssistantConfig(): Promise<{ assistantName: string; ttsConfigured: boolean }> {
   const res = await fetch("/api/config");
   if (!res.ok) throw new ApiError("Could not reach the SENTINEL backend.");
   return res.json();

@@ -111,7 +111,7 @@ export function AIVisualizer({ state, level }: { state: AssistantState; level: n
         ctx.save();
         ctx.translate(cx, cy);
         const bandWidth = radius * 1.5;
-        const baseAmp = s === "THINKING" ? 0.22 : s === "PROCESSING" ? 0.16 : 0.08;
+        const baseAmp = s === "THINKING" ? 0.22 : s === "PROCESSING" ? 0.16 : s === "SPEAKING" ? 0.2 : 0.08;
         const reactiveAmp = 0.34 + currentLevel * 1.4;
         ctx.beginPath();
         ctx.lineWidth = 2.2 * dpr;

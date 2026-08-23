@@ -21,6 +21,7 @@ import { useMicLevel } from "./useMicLevel";
 import { useAudioPlayer } from "./useAudioPlayer";
 import { ApiError, requestSpeech, streamChatTurn } from "../services/api";
 import { createWakeWordRecognizer, isSpeechRecognitionSupported } from "../services/speechRecognition";
+import { isBrowserVoiceSupported, speakWithBrowserVoice, stopBrowserVoice } from "../services/browserVoice";
 
 const INTENT_BY_TOOL: Record<string, { intent: string; scope: "LOCAL" | "CLOUD" }> = {
   get_weather: { intent: "env.weather.lookup", scope: "CLOUD" },
@@ -174,6 +175,29 @@ export function useAssistant() {
         setAssistantState("IDLE");
         return;
       }
+
+      if (settings.voiceProvider === "browser") {
+        if (!isBrowserVoiceSupported()) {
+          setSubsystems((s) => ({ ...s, voiceSynthesis: "UNAVAILABLE" }));
+          setErrorMessage(
+            "This browser doesn't support built-in speech synthesis. Try Chrome, Edge, or Safari."
+          );
+          setAssistantState("ERROR");
+          return;
+        }
+        setAssistantState("SPEAKING");
+        setSubsystems((s) => ({ ...s, voiceSynthesis: "ONLINE" }));
+        try {
+          await speakWithBrowserVoice(text, settings.speechRate);
+          setAssistantState("IDLE");
+        } catch (err) {
+          setSubsystems((s) => ({ ...s, voiceSynthesis: "DEGRADED" }));
+          setErrorMessage(err instanceof Error ? err.message : "SENTINEL's voice output failed.");
+          setAssistantState("ERROR");
+        }
+        return;
+      }
+
       try {
         const response = await requestSpeech(text, settings.speechRate, signal);
         setAssistantState("SPEAKING");
@@ -187,7 +211,7 @@ export function useAssistant() {
         setAssistantState("ERROR");
       }
     },
-    [audioPlayer, settings.speechRate, settings.voiceOutputEnabled]
+    [audioPlayer, settings.speechRate, settings.voiceOutputEnabled, settings.voiceProvider]
   );
 
   const runTurn = useCallback(
@@ -264,8 +288,12 @@ export function useAssistant() {
   runTurnRef.current = runTurn;
 
   const stopSpeaking = useCallback(() => {
-    audioPlayer.stop();
-  }, [audioPlayer]);
+    if (settings.voiceProvider === "browser") {
+      stopBrowserVoice();
+    } else {
+      audioPlayer.stop();
+    }
+  }, [audioPlayer, settings.voiceProvider]);
 
   const toggleMic = useCallback(() => {
     switch (assistantState) {

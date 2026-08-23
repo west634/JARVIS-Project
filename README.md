@@ -1,8 +1,12 @@
 # SENTINEL — Voice-First AI Operations Shell
 
-An original, JARVIS-inspired AI assistant: a voice-first HUD that listens, reasons with OpenAI,
-speaks with an ElevenLabs voice, and can act through a small set of confirmable tools (weather,
-web search, calculator, timers, notes, opening sites).
+An original, JARVIS-inspired AI assistant: a voice-first HUD that listens, reasons with an
+OpenAI-compatible LLM, speaks out loud, and can act through a small set of confirmable tools
+(weather, web search, calculator, timers, notes, opening sites).
+
+**Runs entirely for free** by default: voice uses the browser's built-in speech synthesis (no
+signup), and the brain works with Google's free Gemini API tier (no credit card) as well as paid
+OpenAI. See [Free setup](#free-setup) below.
 
 The assistant's display name, personality, and voice are all configuration, not hard-coded strings —
 see `server/src/assistant/persona.ts` and `.env`.
@@ -15,27 +19,43 @@ client/                React + TypeScript + Vite + Tailwind v4 — the HUD UI
   src/hooks/             useAssistant (state machine), useSpeechRecognition, useMicLevel,
                          useAudioPlayer, useSimulatedTelemetry, usePersistentState
   src/services/         api.ts (SSE chat + speech fetch), audioPlayback.ts (MediaSource streaming),
-                         speechRecognition.ts (Web Speech API wrapper)
+                         browserVoice.ts (free built-in TTS), speechRecognition.ts (Web Speech API)
   src/types/, src/config/
 
 server/                Express + TypeScript — the only place that touches your API keys
-  src/routes/            chat.ts (SSE), speech.ts (audio streaming proxy), meta.ts (non-secret config)
-  src/services/          openai.ts (streaming + tool-calling loop), elevenlabs.ts (TTS streaming)
+  src/routes/            chat.ts (SSE), speech.ts (ElevenLabs streaming proxy, optional), meta.ts
+  src/services/          openai.ts (streaming + tool-calling loop, OpenAI-compatible), elevenlabs.ts
   src/tools/             get_weather, calculate, web_search, set_timer, open_website, create_note
   src/assistant/persona.ts
 ```
 
-Both API keys live only in `server/.env` (loaded from the repo root) and are never sent to the
-browser. The client talks to `/api/chat` and `/api/speech` on your own backend, which then calls
-OpenAI and ElevenLabs server-side.
+API keys live only in `server/.env` (loaded from the repo root) and are never sent to the browser.
+The client talks to `/api/chat` and `/api/speech` on your own backend, which then calls the LLM
+and (optionally) ElevenLabs server-side.
 
-## Setup
+## Free setup
 
 ```bash
-cp .env.example .env       # then fill in your keys
-npm run install:all        # installs client + server dependencies
-npm run dev                # runs both dev servers (client on :5173, server on :8787)
+cp .env.example .env
+npm run install:all
+npm run dev   # client on :5173, server on :8787
 ```
+
+In `.env`, get a free Gemini key (no credit card) at https://aistudio.google.com/apikey, then set:
+
+```env
+OPENAI_API_KEY=<your Gemini key>
+OPENAI_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai/
+OPENAI_MODEL=gemini-2.0-flash
+```
+
+Leave `ELEVENLABS_API_KEY` / `ELEVENLABS_VOICE_ID` blank — voice already defaults to the free
+browser voice (confirmed in Settings → Voice Provider). That's it; nothing costs money.
+
+Prefer paid OpenAI instead? Set `OPENAI_API_KEY` to a real OpenAI key, leave `OPENAI_BASE_URL`
+blank, and pick any OpenAI chat model for `OPENAI_MODEL`. Want the premium ElevenLabs voice
+instead of the browser one? Fill in `ELEVENLABS_API_KEY` / `ELEVENLABS_VOICE_ID` and switch the
+provider in Settings.
 
 Open `http://localhost:5173`. The Vite dev server proxies `/api/*` to the backend on `:8787`.
 
@@ -50,38 +70,23 @@ npm start       # serves the built client + API from a single Express process on
 
 | Variable | Purpose |
 |---|---|
-| `OPENAI_API_KEY` | Reasoning/intelligence layer (chat + tool calling) |
-| `ELEVENLABS_API_KEY` | Text-to-speech |
-| `ELEVENLABS_VOICE_ID` | Voice used for all TTS output |
-| `OPENAI_MODEL` | Chat model (default `gpt-4o-mini`) |
+| `OPENAI_API_KEY` | Reasoning layer key — an OpenAI key, or a free Gemini key when paired with `OPENAI_BASE_URL` |
+| `OPENAI_BASE_URL` | Optional. Point this at any OpenAI-compatible endpoint (e.g. Gemini's). Leave blank for real OpenAI |
+| `OPENAI_MODEL` | Chat model name (default `gpt-4o-mini`; use `gemini-2.0-flash` for Gemini) |
+| `ELEVENLABS_API_KEY` | Optional. Only needed for the premium ElevenLabs voice |
+| `ELEVENLABS_VOICE_ID` | Optional. Voice ID for ElevenLabs, if used |
 | `PORT` | Backend port (default `8787`) |
 
 ## What's real vs. decorative
 
 - **Assistant state machine** (`IDLE / LISTENING / PROCESSING / THINKING / SPEAKING / ERROR`),
-  **speech recognition**, **streaming chat**, **streaming TTS playback**, **tool calls**
-  (weather via Open-Meteo, search via DuckDuckGo, calculator via mathjs, timers, notes, site-open
-  confirmation), and the **subsystem roster** are all wired to real application/browser state —
-  no `setTimeout`-driven fake progress.
+  **speech recognition**, **streaming chat**, **TTS playback** (browser voice or streamed
+  ElevenLabs audio), **tool calls** (weather via Open-Meteo, search via DuckDuckGo, calculator via
+  mathjs, timers, notes, site-open confirmation), and the **subsystem roster** are all wired to
+  real application/browser state — no `setTimeout`-driven fake progress.
 - The **Environment** and **Perimeter** panels are intentionally stylized "ops shell" flavor
   telemetry (there's no building sensor behind them) that drifts on a slow random walk, matching
   the reference HUD's aesthetic. Everything else reflects genuine state.
-
-## Known limitation: the provided API keys
-
-Both integrations are fully implemented and were verified against the live OpenAI and ElevenLabs
-APIs during development, but the specific credentials supplied to this build currently can't
-complete requests due to account-level restrictions, not a bug in this app:
-
-- **OpenAI**: the key returns `insufficient_quota` — the account needs billing/credits added.
-- **ElevenLabs**: the account is on the free tier, which blocks the TTS API entirely for the
-  configured voice (`free_users_not_allowed` / `payment_required`), including ElevenLabs's own
-  default library voices.
-
-Once billing is added on both accounts, no code changes are needed — the app will start
-speaking and reasoning immediately. Until then, the UI degrades gracefully: errors surface as a
-readable message in the HUD (never a raw stack trace or key), and the Subsystem Roster reflects
-the degraded state.
 
 ## Security
 

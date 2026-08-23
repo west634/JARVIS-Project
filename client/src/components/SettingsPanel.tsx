@@ -10,6 +10,7 @@ export function SettingsPanel({
   onClearHistory,
   onClose,
   notesCount,
+  ttsConfigured,
 }: {
   open: boolean;
   settings: AssistantSettings;
@@ -17,6 +18,7 @@ export function SettingsPanel({
   onClearHistory: () => void;
   onClose: () => void;
   notesCount: number;
+  ttsConfigured: boolean;
 }) {
   if (!open) return null;
 
@@ -78,6 +80,39 @@ export function SettingsPanel({
 
         <Field label="Voice Output">
           <Toggle checked={settings.voiceOutputEnabled} onChange={(v) => onChange({ ...settings, voiceOutputEnabled: v })} />
+        </Field>
+
+        <Field label="Voice Provider">
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => onChange({ ...settings, voiceProvider: "browser" })}
+              className={`flex-1 rounded-sm border px-2 py-1.5 text-[11px] uppercase tracking-wide cursor-pointer ${
+                settings.voiceProvider === "browser"
+                  ? "border-teal text-teal bg-teal/10"
+                  : "border-panel-border text-ink-dim hover:border-teal-dim"
+              }`}
+            >
+              Browser (Free)
+            </button>
+            <button
+              type="button"
+              onClick={() => onChange({ ...settings, voiceProvider: "elevenlabs" })}
+              title={ttsConfigured ? undefined : "Add ELEVENLABS_API_KEY and ELEVENLABS_VOICE_ID to the server's .env to enable this"}
+              className={`flex-1 rounded-sm border px-2 py-1.5 text-[11px] uppercase tracking-wide cursor-pointer ${
+                settings.voiceProvider === "elevenlabs"
+                  ? "border-teal text-teal bg-teal/10"
+                  : "border-panel-border text-ink-dim hover:border-teal-dim"
+              }`}
+            >
+              ElevenLabs{ttsConfigured ? "" : " (not set up)"}
+            </button>
+          </div>
+          {settings.voiceProvider === "elevenlabs" && !ttsConfigured && (
+            <p className="text-[11px] text-amber mt-1.5">
+              The server has no ElevenLabs key configured — voice output will show an error until it does.
+            </p>
+          )}
         </Field>
 
         <Field label="Wake Word">
