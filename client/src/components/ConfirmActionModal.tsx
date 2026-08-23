@@ -11,14 +11,17 @@ export function ConfirmActionModal({
 }) {
   if (!action) return null;
 
-  const url = String(action.payload.url ?? "");
+  const isFile = action.type === "open_file";
+  const target = String(action.payload[isFile ? "path" : "url"] ?? "");
 
   return (
     <div className="fixed inset-0 z-30 flex items-center justify-center bg-void/80 backdrop-blur-sm px-4">
       <div className="hud-corner w-full max-w-sm rounded-sm border border-teal-dim/60 bg-panel px-5 py-5 animate-rise-in">
         <p className="text-[11px] tracking-[0.2em] text-amber uppercase mb-2">Confirmation required</p>
         <p className="text-sm text-ink leading-relaxed">
-          SENTINEL wants to open <span className="text-teal break-all">{url}</span> in a new tab.
+          SENTINEL wants to open{" "}
+          <span className="text-teal break-all">{target}</span>
+          {isFile ? " in its default application." : " in a new tab."}
         </p>
         <div className="flex gap-2.5 mt-5">
           <button

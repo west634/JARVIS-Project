@@ -19,7 +19,7 @@ import { usePersistentList, usePersistentSettings } from "./usePersistentState";
 import { useSpeechRecognition } from "./useSpeechRecognition";
 import { useMicLevel } from "./useMicLevel";
 import { useAudioPlayer } from "./useAudioPlayer";
-import { ApiError, requestSpeech, streamChatTurn } from "../services/api";
+import { ApiError, openFileOnServer, requestSpeech, streamChatTurn } from "../services/api";
 import { createWakeWordRecognizer, isSpeechRecognitionSupported } from "../services/speechRecognition";
 import { isBrowserVoiceSupported, speakWithBrowserVoice, stopBrowserVoice } from "../services/browserVoice";
 
@@ -30,6 +30,10 @@ const INTENT_BY_TOOL: Record<string, { intent: string; scope: "LOCAL" | "CLOUD" 
   set_timer: { intent: "system.timer.set", scope: "LOCAL" },
   open_website: { intent: "system.navigate.request", scope: "LOCAL" },
   create_note: { intent: "memory.note.create", scope: "LOCAL" },
+  list_directory: { intent: "fs.directory.list", scope: "LOCAL" },
+  read_file: { intent: "fs.file.read", scope: "LOCAL" },
+  open_file: { intent: "fs.file.open", scope: "LOCAL" },
+  search_email: { intent: "mail.search", scope: "CLOUD" },
 };
 
 function makeId(): string {
@@ -161,7 +165,7 @@ export function useAssistant() {
               { id: makeId(), label, totalSeconds: seconds, remainingSeconds: seconds, startedAt: Date.now() },
             ]);
           }
-        } else if (action.type === "open_website") {
+        } else if (action.type === "open_website" || action.type === "open_file") {
           setPendingConfirmation(action);
         }
       }
@@ -320,6 +324,14 @@ export function useAssistant() {
     if (pendingConfirmation?.type === "open_website") {
       const url = String(pendingConfirmation.payload.url ?? "");
       if (url) window.open(url, "_blank", "noopener,noreferrer");
+    } else if (pendingConfirmation?.type === "open_file") {
+      const filePath = String(pendingConfirmation.payload.path ?? "");
+      if (filePath) {
+        openFileOnServer(filePath).catch((err) => {
+          setErrorMessage(err instanceof ApiError ? err.message : "Could not open that file.");
+          setAssistantState("ERROR");
+        });
+      }
     }
     setPendingConfirmation(null);
   }, [pendingConfirmation]);

@@ -111,3 +111,22 @@ export async function requestSpeech(text: string, speed: number, signal?: AbortS
   }
   return res;
 }
+
+/** Executes an operator-confirmed local file open. Only ever called after explicit confirmation. */
+export async function openFileOnServer(path: string): Promise<void> {
+  const res = await fetch("/api/actions/open-file", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ path }),
+  });
+  if (!res.ok) {
+    let message = "Could not open that file.";
+    try {
+      const body = await res.json();
+      if (typeof body.error === "string") message = body.error;
+    } catch {
+      // ignore
+    }
+    throw new ApiError(message);
+  }
+}

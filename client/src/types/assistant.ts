@@ -13,7 +13,7 @@ export interface ConversationTurn {
   isError?: boolean;
 }
 
-export type PendingActionType = "open_website" | "set_timer" | "create_note";
+export type PendingActionType = "open_website" | "set_timer" | "create_note" | "open_file";
 
 export interface PendingAction {
   type: PendingActionType;

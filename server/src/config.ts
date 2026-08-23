@@ -24,6 +24,8 @@ function optional(name: string): string | undefined {
 
 const elevenLabsApiKey = optional("ELEVENLABS_API_KEY");
 const elevenLabsVoiceId = optional("ELEVENLABS_VOICE_ID");
+const emailAddress = optional("EMAIL_ADDRESS");
+const emailAppPassword = optional("EMAIL_APP_PASSWORD");
 
 export const config = {
   port: Number(process.env.PORT) || 8787,
@@ -38,6 +40,13 @@ export const config = {
   elevenLabsApiKey,
   elevenLabsVoiceId,
   ttsConfigured: Boolean(elevenLabsApiKey && elevenLabsVoiceId),
+  // Email search is entirely optional — the search_email tool reports a
+  // clear "not configured" error until these are set.
+  emailAddress,
+  emailAppPassword,
+  emailImapHost: process.env.EMAIL_IMAP_HOST || "imap.gmail.com",
+  emailImapPort: Number(process.env.EMAIL_IMAP_PORT) || 993,
+  emailConfigured: Boolean(emailAddress && emailAppPassword),
 };
 
 export function describeConfigError(err: unknown): string {
