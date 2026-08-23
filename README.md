@@ -27,8 +27,9 @@ server/                Express + TypeScript — the only place that touches your
   src/routes/            chat.ts (SSE), speech.ts (ElevenLabs streaming proxy, optional), meta.ts,
                          actions.ts (executes operator-confirmed local actions, e.g. opening a file)
   src/services/          openai.ts (streaming + tool-calling loop, OpenAI-compatible), elevenlabs.ts
-  src/tools/             get_weather, calculate, web_search, set_timer, open_website, create_note,
-                         list_directory, read_file, open_file, search_email (IMAP)
+  src/tools/             get_weather, calculate, web_search (Tavily, or keyless fallback), set_timer,
+                         open_website, create_note, list_directory, read_file, open_file, search_email
+  src/clap/detector.ts   optional OS-level double-clap listener (see Clap-to-open below)
   src/assistant/persona.ts
 ```
 
@@ -65,6 +66,23 @@ provider in Settings.
 
 Open `http://localhost:5173`. The Vite dev server proxies `/api/*` to the backend on `:8787`.
 
+## Clap-to-open
+
+Double-clap near your computer to open (or bring to front) SENTINEL's tab — including if it isn't
+open at all yet. This has to run outside the browser (a closed tab can't run any JS to listen for
+anything), so it's a small always-on listener in the backend process itself, active for as long as
+`npm run dev` / `npm start` keeps running.
+
+1. Install `sox` (macOS): `brew install sox`
+2. In `.env`, set `CLAP_TO_OPEN_ENABLED=true`
+3. Restart (`Ctrl+C`, then `npm run dev` again)
+
+Nothing is ever recorded or sent anywhere — it only looks at momentary volume spikes in memory to
+tell a clap from silence, then discards them. Clap detection on a laptop mic is inherently
+approximate (a door slam or a dropped book can trigger it; a very soft clap might not) — the
+thresholds in `server/src/clap/detector.ts` are reasonable defaults, not something tuned to your
+specific room.
+
 ### Production build
 
 ```bash
@@ -78,22 +96,26 @@ npm start       # serves the built client + API from a single Express process on
 |---|---|
 | `OPENAI_API_KEY` | Reasoning layer key — an OpenAI key, or a free Gemini key when paired with `OPENAI_BASE_URL` |
 | `OPENAI_BASE_URL` | Optional. Point this at any OpenAI-compatible endpoint (e.g. Gemini's). Leave blank for real OpenAI |
-| `OPENAI_MODEL` | Chat model name (default `gpt-4o-mini`; use `gemini-2.0-flash` for Gemini) |
+| `OPENAI_MODEL` | Chat model name (default `gpt-4o-mini`; use Google's current Gemini model name for Gemini) |
 | `ELEVENLABS_API_KEY` | Optional. Only needed for the premium ElevenLabs voice |
 | `ELEVENLABS_VOICE_ID` | Optional. Voice ID for ElevenLabs, if used |
 | `EMAIL_ADDRESS` | Optional. Enables `search_email`. Your email address |
 | `EMAIL_APP_PASSWORD` | Optional. An IMAP app password (not your real password) — see `.env.example` |
 | `EMAIL_IMAP_HOST` | Optional. IMAP server (default `imap.gmail.com`) |
 | `EMAIL_IMAP_PORT` | Optional. IMAP port (default `993`) |
+| `TAVILY_API_KEY` | Optional but recommended. Free key for real `web_search` results — see `.env.example` |
+| `CLAP_TO_OPEN_ENABLED` | Optional. `true` to enable double-clap-to-open (needs `sox` installed) |
+| `CLAP_OPEN_URL` | Optional. Overrides the auto-detected URL clap-to-open opens |
 | `PORT` | Backend port (default `8787`) |
 
 ## What's real vs. decorative
 
 - **Assistant state machine** (`IDLE / LISTENING / PROCESSING / THINKING / SPEAKING / ERROR`),
   **speech recognition**, **streaming chat**, **TTS playback** (browser voice or streamed
-  ElevenLabs audio), **tool calls** (weather via Open-Meteo, search via DuckDuckGo, calculator via
-  mathjs, timers, notes, site-open confirmation), and the **subsystem roster** are all wired to
-  real application/browser state — no `setTimeout`-driven fake progress.
+  ElevenLabs audio), **tool calls** (weather via Open-Meteo, search via Tavily, calculator via
+  mathjs, timers, notes, site/file-open confirmation, filesystem access, email search, clap-to-open),
+  and the **subsystem roster** are all wired to real application/browser state — no
+  `setTimeout`-driven fake progress.
 - The **Environment** and **Perimeter** panels are intentionally stylized "ops shell" flavor
   telemetry (there's no building sensor behind them) that drifts on a slow random walk, matching
   the reference HUD's aesthetic. Everything else reflects genuine state.

@@ -1,8 +1,8 @@
 import { Router } from "express";
-import { execFile } from "node:child_process";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { openTarget } from "../utils/opener.js";
 
 export const actionsRouter = Router();
 
@@ -10,17 +10,6 @@ function resolvePath(input: string): string {
   const trimmed = input.trim();
   const expanded = trimmed.startsWith("~") ? path.join(os.homedir(), trimmed.slice(1)) : trimmed;
   return path.resolve(expanded);
-}
-
-function openerForPlatform(): { command: string; args: (target: string) => string[] } {
-  switch (process.platform) {
-    case "darwin":
-      return { command: "open", args: (target) => [target] };
-    case "win32":
-      return { command: "cmd", args: (target) => ["/c", "start", "", target] };
-    default:
-      return { command: "xdg-open", args: (target) => [target] };
-  }
 }
 
 /**
@@ -46,12 +35,10 @@ actionsRouter.post("/actions/open-file", async (req, res) => {
     return;
   }
 
-  const opener = openerForPlatform();
-  execFile(opener.command, opener.args(target), (err) => {
-    if (err) {
-      res.status(500).json({ error: "Could not open that file." });
-      return;
-    }
+  try {
+    await openTarget(target);
     res.json({ status: "opened", path: target });
-  });
+  } catch {
+    res.status(500).json({ error: "Could not open that file." });
+  }
 });

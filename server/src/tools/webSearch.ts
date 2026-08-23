@@ -1,4 +1,16 @@
+import { config } from "../config.js";
 import type { ToolExecutionResult } from "./types.js";
+
+interface TavilyResult {
+  title: string;
+  url: string;
+  content: string;
+}
+
+interface TavilyResponse {
+  answer?: string;
+  results?: TavilyResult[];
+}
 
 interface DuckDuckGoResponse {
   AbstractText?: string;
@@ -7,12 +19,41 @@ interface DuckDuckGoResponse {
   RelatedTopics?: Array<{ Text?: string; FirstURL?: string }>;
 }
 
-export async function webSearch(args: Record<string, unknown>): Promise<ToolExecutionResult> {
-  const query = String(args.query ?? "").trim();
-  if (!query) {
-    return { contentForModel: "Error: no search query was provided." };
+async function searchWithTavily(query: string): Promise<ToolExecutionResult> {
+  const res = await fetch("https://api.tavily.com/search", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${config.tavilyApiKey}`,
+    },
+    body: JSON.stringify({
+      query,
+      search_depth: "basic",
+      max_results: 5,
+      include_answer: true,
+    }),
+  });
+
+  if (!res.ok) {
+    return { contentForModel: `Error: web search service returned status ${res.status}.` };
   }
 
+  const data = (await res.json()) as TavilyResponse;
+  const lines: string[] = [];
+  if (data.answer) lines.push(data.answer);
+  for (const result of data.results ?? []) {
+    lines.push(`- ${result.title}: ${result.content.slice(0, 300)} (${result.url})`);
+  }
+
+  if (!lines.length) {
+    return { contentForModel: `No web results were found for "${query}".` };
+  }
+
+  return { contentForModel: `Search results for "${query}":\n${lines.join("\n")}` };
+}
+
+/** Free, keyless fallback with much narrower coverage — only returns anything for topics DuckDuckGo has a summary card for. */
+async function searchWithDuckDuckGo(query: string): Promise<ToolExecutionResult> {
   const res = await fetch(
     `https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1&skip_disambig=1`
   );
@@ -34,9 +75,18 @@ export async function webSearch(args: Record<string, unknown>): Promise<ToolExec
 
   if (!lines.length) {
     return {
-      contentForModel: `No direct summary was found for "${query}". Tell the user to phrase the query more specifically or that this quick-search tool has limited coverage.`,
+      contentForModel: `No direct summary was found for "${query}" via the fallback search tool (no TAVILY_API_KEY is configured, so coverage is limited to topics with a quick-reference summary). Tell the user to phrase the query more specifically, or add a free Tavily key for full web search.`,
     };
   }
 
   return { contentForModel: `Search results for "${query}":\n${lines.join("\n")}` };
+}
+
+export async function webSearch(args: Record<string, unknown>): Promise<ToolExecutionResult> {
+  const query = String(args.query ?? "").trim();
+  if (!query) {
+    return { contentForModel: "Error: no search query was provided." };
+  }
+
+  return config.tavilyApiKey ? searchWithTavily(query) : searchWithDuckDuckGo(query);
 }

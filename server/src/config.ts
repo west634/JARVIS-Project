@@ -26,6 +26,7 @@ const elevenLabsApiKey = optional("ELEVENLABS_API_KEY");
 const elevenLabsVoiceId = optional("ELEVENLABS_VOICE_ID");
 const emailAddress = optional("EMAIL_ADDRESS");
 const emailAppPassword = optional("EMAIL_APP_PASSWORD");
+const tavilyApiKey = optional("TAVILY_API_KEY");
 
 export const config = {
   port: Number(process.env.PORT) || 8787,
@@ -47,6 +48,11 @@ export const config = {
   emailImapHost: process.env.EMAIL_IMAP_HOST || "imap.gmail.com",
   emailImapPort: Number(process.env.EMAIL_IMAP_PORT) || 993,
   emailConfigured: Boolean(emailAddress && emailAppPassword),
+  // web_search falls back to a much weaker keyless search when this is unset.
+  tavilyApiKey,
+  // Clap-to-open: opt-in OS-level double-clap listener (see clap/detector.ts).
+  clapToOpenEnabled: (process.env.CLAP_TO_OPEN_ENABLED || "").toLowerCase() === "true",
+  clapOpenUrl: optional("CLAP_OPEN_URL"),
 };
 
 export function describeConfigError(err: unknown): string {
