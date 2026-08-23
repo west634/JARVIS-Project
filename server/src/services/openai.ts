@@ -24,6 +24,30 @@ export interface ChatStreamResult {
   pendingActions: PendingAction[];
 }
 
+function isRateLimitError(err: unknown): boolean {
+  if (err && typeof err === "object" && "status" in err && (err as { status?: number }).status === 429) {
+    return true;
+  }
+  return err instanceof Error && /rate limit|429|quota/i.test(err.message);
+}
+
+/**
+ * Free-tier providers (notably Gemini) throttle requests per minute far
+ * more aggressively than paid OpenAI, so a burst of normal usage can
+ * legitimately hit a transient 429. Retrying with backoff smooths that
+ * over instead of surfacing an error the operator has to manually retry.
+ */
+async function withRateLimitRetry<T>(fn: () => Promise<T>, maxAttempts = 3): Promise<T> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      if (!isRateLimitError(err) || attempt >= maxAttempts - 1) throw err;
+      await new Promise((resolve) => setTimeout(resolve, 2000 * 2 ** attempt));
+    }
+  }
+}
+
 interface AccumulatedToolCall {
   id: string;
   name: string;
@@ -57,14 +81,16 @@ export async function streamChat(
   const pendingActions: PendingAction[] = [];
 
   // First pass: stream, but watch for tool_call deltas.
-  const first = await client.chat.completions.create({
-    model: config.openaiModel,
-    messages,
-    tools: toolDefinitions,
-    tool_choice: "auto",
-    stream: true,
-    temperature: 0.6,
-  });
+  const first = await withRateLimitRetry(() =>
+    client.chat.completions.create({
+      model: config.openaiModel,
+      messages,
+      tools: toolDefinitions,
+      tool_choice: "auto",
+      stream: true,
+      temperature: 0.6,
+    })
+  );
 
   let fullText = "";
   const toolCallAccumulator = new Map<number, AccumulatedToolCall>();
@@ -148,12 +174,14 @@ export async function streamChat(
     });
   }
 
-  const second = await client.chat.completions.create({
-    model: config.openaiModel,
-    messages,
-    stream: true,
-    temperature: 0.6,
-  });
+  const second = await withRateLimitRetry(() =>
+    client.chat.completions.create({
+      model: config.openaiModel,
+      messages,
+      stream: true,
+      temperature: 0.6,
+    })
+  );
 
   let secondText = "";
   for await (const chunk of second) {
