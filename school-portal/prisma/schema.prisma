@@ -348,7 +348,10 @@ model SubmissionFile {
   submissionId String
   submission   Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
   fileName     String
-  url          String
+  // Internal storage location (see lib/storage/fileStorage.ts) — never a
+  // public URL. The app-facing download URL is always derived as
+  // /api/files/{id}, which re-checks permission on every request.
+  storageKey   String
   mimeType     String
   sizeBytes    Int
 

@@ -10,7 +10,10 @@ export function SidebarNav({ items }: { items: NavItem[] }) {
   return (
     <nav className="flex flex-col gap-1">
       {items.map((item) => {
-        const active = pathname === item.href;
+        // "Home" (/student, /teacher, …) only matches exactly, since every
+        // other item's href also starts with that prefix.
+        const isHome = item.href === "/student" || item.href === "/teacher" || item.href === "/parent" || item.href === "/admin";
+        const active = isHome ? pathname === item.href : pathname === item.href || pathname.startsWith(`${item.href}/`);
         return (
           <Link
             key={item.href}

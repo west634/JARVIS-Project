@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireRole } from "@/lib/auth/guards";
 import { getTeacherDashboard } from "@/lib/services/teacherDashboard";
 import { Card, CardHeader } from "@/components/ui/Card";
@@ -71,11 +72,16 @@ export default async function TeacherHomePage() {
           ) : (
             <ul className="divide-y divide-black/6 dark:divide-white/8">
               {data.ungradedSubmissions.map((s) => (
-                <li key={s.submissionId} className="py-3">
-                  <p className="font-medium">{s.assignmentTitle}</p>
-                  <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                    {s.studentName} · {s.courseName} · submitted {formatDueDate(s.submittedAt)}
-                  </p>
+                <li key={s.submissionId}>
+                  <Link
+                    href={`/teacher/grade/${s.assignmentId}`}
+                    className="block py-3 transition hover:bg-black/[0.02] dark:hover:bg-white/[0.03]"
+                  >
+                    <p className="font-medium">{s.assignmentTitle}</p>
+                    <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                      {s.studentName} · {s.courseName} · submitted {formatDueDate(s.submittedAt)}
+                    </p>
+                  </Link>
                 </li>
               ))}
             </ul>

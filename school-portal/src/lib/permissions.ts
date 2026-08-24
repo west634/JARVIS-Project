@@ -76,6 +76,32 @@ export function canViewStudent(
   }
 }
 
+/**
+ * Narrower than canViewStudent: for private per-submission artifacts (an
+ * uploaded file), only the student themself, the *specific* teacher who
+ * owns that course section, an admin, or a linked guardian may access it —
+ * not every teacher in the school.
+ */
+export function canAccessSubmissionFile(
+  user: MinimalUser,
+  target: { studentUserId: string; teacherUserId: string; schoolId: string },
+  guardianStudentIds: readonly string[] = [],
+): boolean {
+  if (!isSameSchool(user, target.schoolId)) return false;
+  switch (user.role) {
+    case "STUDENT":
+      return user.userId === target.studentUserId;
+    case "TEACHER":
+      return user.userId === target.teacherUserId;
+    case "ADMIN":
+      return true;
+    case "PARENT":
+      return guardianStudentIds.includes(target.studentUserId);
+    default:
+      return false;
+  }
+}
+
 export function canTakeAttendance(
   user: MinimalUser,
   target: { teacherUserId: string; schoolId: string },

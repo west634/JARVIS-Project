@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireRole } from "@/lib/auth/guards";
 import { getStudentDashboard } from "@/lib/services/studentDashboard";
 import { Card, CardHeader } from "@/components/ui/Card";
@@ -55,8 +56,8 @@ export default async function StudentHomePage() {
         <Card>
           <CardHeader title="Up next" />
           {data.upNext ? (
-            <div>
-              <p className="font-medium">{data.upNext.title}</p>
+            <Link href={`/student/assignments/${data.upNext.id}`} className="block">
+              <p className="font-medium hover:underline">{data.upNext.title}</p>
               <p className="text-sm text-zinc-500 dark:text-zinc-400">{data.upNext.courseName}</p>
               <p className="mt-2 text-sm font-medium text-indigo-600 dark:text-indigo-400">
                 Due {formatDueDate(data.upNext.dueDate)}
@@ -65,7 +66,7 @@ export default async function StudentHomePage() {
                 <PriorityDot priority={data.upNext.priority} />
                 <StatusBadge status={data.upNext.status} />
               </div>
-            </div>
+            </Link>
           ) : (
             <EmptyState message="Nothing due soon — you're caught up." />
           )}
@@ -82,20 +83,25 @@ export default async function StudentHomePage() {
         ) : (
           <ul className="divide-y divide-black/6 dark:divide-white/8">
             {data.missing.map((a) => (
-              <li key={a.id} className="flex items-center justify-between gap-4 py-3">
-                <div className="flex items-center gap-3">
-                  <PriorityDot priority={a.priority} />
-                  <div>
-                    <p className="font-medium">{a.title}</p>
-                    <p className="text-sm text-zinc-500 dark:text-zinc-400">{a.courseName}</p>
+              <li key={a.id}>
+                <Link
+                  href={`/student/assignments/${a.id}`}
+                  className="flex items-center justify-between gap-4 py-3 transition hover:bg-black/[0.02] dark:hover:bg-white/[0.03]"
+                >
+                  <div className="flex items-center gap-3">
+                    <PriorityDot priority={a.priority} />
+                    <div>
+                      <p className="font-medium">{a.title}</p>
+                      <p className="text-sm text-zinc-500 dark:text-zinc-400">{a.courseName}</p>
+                    </div>
                   </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                    Was due {formatDueDate(a.dueDate)}
-                  </p>
-                  <StatusBadge status={a.status} />
-                </div>
+                  <div className="text-right">
+                    <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                      Was due {formatDueDate(a.dueDate)}
+                    </p>
+                    <StatusBadge status={a.status} />
+                  </div>
+                </Link>
               </li>
             ))}
           </ul>
@@ -110,14 +116,19 @@ export default async function StudentHomePage() {
           ) : (
             <ul className="divide-y divide-black/6 dark:divide-white/8">
               {data.recentlyGraded.map((a) => (
-                <li key={a.id} className="flex items-center justify-between py-3">
-                  <div>
-                    <p className="font-medium">{a.title}</p>
-                    <p className="text-sm text-zinc-500 dark:text-zinc-400">{a.courseName}</p>
-                  </div>
-                  <p className="font-semibold">
-                    {a.score}/{a.points}
-                  </p>
+                <li key={a.id}>
+                  <Link
+                    href={`/student/assignments/${a.id}`}
+                    className="flex items-center justify-between py-3 transition hover:bg-black/[0.02] dark:hover:bg-white/[0.03]"
+                  >
+                    <div>
+                      <p className="font-medium">{a.title}</p>
+                      <p className="text-sm text-zinc-500 dark:text-zinc-400">{a.courseName}</p>
+                    </div>
+                    <p className="font-semibold">
+                      {a.score}/{a.points}
+                    </p>
+                  </Link>
                 </li>
               ))}
             </ul>

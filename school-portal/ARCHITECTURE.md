@@ -164,10 +164,43 @@ school-portal/
     integration/
 ```
 
-## 8. Roadmap (phases 2–7, not built yet)
+## 8. Phase 2: courses, assignments, submissions, grades, gradebook
 
-Matches the spec's phased plan exactly: Phase 2 (assignment submission + gradebook editing),
-Phase 3 (calendar/schedule/notifications/messaging), Phase 4 (parent portal depth, athletics,
-announcements), Phase 5 (AI features), Phase 6 (analytics/import-export/integrations), Phase 7
-(perf/accessibility/security/mobile polish). Each phase builds on the service-layer boundary
-established in Phase 1 rather than bypassing it.
+Built on top of the Phase 1 foundation without changing it:
+
+- **Class pages** (`app/student/classes`, `app/teacher/classes`) — Overview/Assignments/Grades
+  (or Gradebook)/Resources tabs, all URL-driven (`?tab=`) rather than client-state-driven, so a
+  class page's tab is bookmarkable and shareable, matching the "persistent filters" requirement
+  the same way the assignment list's status filter does.
+- **Submission system** — `lib/actions/submissionActions.ts` (Server Actions) plus
+  `lib/storage/fileStorage.ts`, a storage interface with a local-filesystem implementation for
+  now. Uploaded files are never public/static; they're only ever served through
+  `app/api/files/[fileId]/route.ts`, which re-derives the requester's permission
+  (`canAccessSubmissionFile`) on every single request rather than trusting a signed/guessable
+  URL. Submission and draft-save share one `handle()` implementation, differing only in whether
+  `submittedAt` gets set — this is also where the spec's "tell the student exactly what happened
+  if it fails" requirement (§29) is implemented: a failed submission returns a specific error
+  string, never a silent failure.
+- **Grade calculation** (`lib/services/grades.ts`) is pure and framework-free by design — the
+  same `computeWeightedGrade`/`projectWhatIf` functions run server-side to build the Grades page
+  and client-side (imported directly into a Client Component) to power the live "what if" tool
+  with zero network round-trips per keystroke.
+- **Grading workflow** (`app/teacher/grade/[assignmentId]`) calls
+  `lib/actions/gradingActions.ts` directly from client event handlers (not through a `<form>`) —
+  a supported Server Actions pattern — so keyboard-driven navigation (←/→) and autosave-on-navigate
+  can share one code path. Every grade write records the prior value to `GradeHistory` before
+  overwriting, which is the entire "grade history + undo" feature: there's no separate undo
+  stack to keep in sync, undoing is just restoring (and deleting) the latest history row. Every
+  grade mutation also writes an `AuditLog` row — the first real consumer of that Phase 1 model.
+- **Ownership/enrollment checks that double as 404s.** Every service function that uses
+  `findUniqueOrThrow`/`findFirstOrThrow` to both fetch a record and verify the caller may see it
+  (e.g. "this section, but only if this student is enrolled") is wrapped in
+  `lib/notFound.ts#withNotFoundOn404`, which turns Prisma's P2025 into Next's `notFound()` — a
+  clean 404 page, never a raw stack trace, whether the ID is bogus or just someone else's.
+
+## 9. Roadmap (phases 3–7, not built yet)
+
+Matches the spec's phased plan: Phase 3 (calendar/schedule/notifications/messaging), Phase 4
+(parent portal depth, athletics, announcements), Phase 5 (AI features), Phase 6
+(analytics/import-export/integrations), Phase 7 (perf/accessibility/security/mobile polish). Each
+phase builds on the service-layer boundary established in Phase 1 rather than bypassing it.

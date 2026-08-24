@@ -14,6 +14,7 @@ export type TeacherSchedulePeriod = {
 
 export type UngradedSubmission = {
   submissionId: string;
+  assignmentId: string;
   assignmentTitle: string;
   courseName: string;
   studentName: string;
@@ -92,6 +93,7 @@ export async function getTeacherDashboard(
 
     const ungradedSubmissions: UngradedSubmission[] = ungradedRows.map((s) => ({
       submissionId: s.id,
+      assignmentId: s.assignmentId,
       assignmentTitle: s.assignment.title,
       courseName: s.assignment.courseSection.course.name,
       studentName: s.studentProfile.user.name,

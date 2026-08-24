@@ -256,6 +256,7 @@ async function main() {
       points: number,
       categoryId: string,
       estimatedMinutes: number,
+      submissionType: "FILE" | "TEXT" | "LINK" | "MULTIPLE" = "FILE",
     ) {
       return tx.assignment.create({
         data: {
@@ -266,7 +267,7 @@ async function main() {
           description: `${title} for ${section.course.name}.`,
           instructions: "Complete and submit before the due date.",
           points,
-          submissionType: "FILE",
+          submissionType,
           dueDate: daysFromNow(dueInDays, dueInDays === 0 ? 23 : 23, 59),
           assignedDate: daysFromNow(-3),
           estimatedMinutes,
@@ -361,19 +362,30 @@ async function main() {
 
     // index map: 0 weston, 1 maya, 2 liam, 3 sofia, 4 noah, 5 ava
     await pastGraded(biology, "Cell Structure Quiz", 10, 50, biology.categories.tests.id, smith.user.id);
-    await dueSoon(biology, "Lab Report: Photosynthesis", 0, 100, biology.categories.homework.id, 90);
-    await overdueMixed(biology, "Ecosystem Project", 2, 100, biology.categories.projects.id, smith.user.id, [0, 2]);
+    const labReport = await dueSoon(biology, "Lab Report: Photosynthesis", 0, 100, biology.categories.homework.id, 90);
+    const ecosystemProject = await overdueMixed(biology, "Ecosystem Project", 2, 100, biology.categories.projects.id, smith.user.id, [0, 2]);
+
+    const labReportRubric = await tx.rubric.create({ data: { assignmentId: labReport.id, title: "Lab Report Rubric" } });
+    await tx.rubricCriterion.create({ data: { rubricId: labReportRubric.id, description: "Hypothesis clearly stated", points: 15 } });
+    await tx.rubricCriterion.create({ data: { rubricId: labReportRubric.id, description: "Procedure accurately described", points: 25 } });
+    await tx.rubricCriterion.create({ data: { rubricId: labReportRubric.id, description: "Data recorded and graphed correctly", points: 35 } });
+    await tx.rubricCriterion.create({ data: { rubricId: labReportRubric.id, description: "Conclusion supported by data", points: 25 } });
+
+    const ecosystemRubric = await tx.rubric.create({ data: { assignmentId: ecosystemProject.id, title: "Ecosystem Project Rubric" } });
+    await tx.rubricCriterion.create({ data: { rubricId: ecosystemRubric.id, description: "Food web accuracy", points: 40 } });
+    await tx.rubricCriterion.create({ data: { rubricId: ecosystemRubric.id, description: "Written explanation", points: 30 } });
+    await tx.rubricCriterion.create({ data: { rubricId: ecosystemRubric.id, description: "Presentation quality", points: 30 } });
     await overdueMixed(biology, "Microscope Lab Write-up", 6, 40, biology.categories.homework.id, smith.user.id, [2]);
     await overdueUngraded(biology, "Diagram Homework", 4, 20, biology.categories.homework.id, [2, 5]);
-    await dueSoon(biology, "Genetics Homework", 1, 20, biology.categories.homework.id, 30);
+    await dueSoon(biology, "Genetics Homework", 1, 20, biology.categories.homework.id, 30, "TEXT");
 
     await pastGraded(algebra, "Chapter 3 Test", 5, 100, algebra.categories.tests.id, ortiz.user.id);
-    await dueSoon(algebra, "Problem Set 7", 1, 20, algebra.categories.homework.id, 40);
+    await dueSoon(algebra, "Problem Set 7", 1, 20, algebra.categories.homework.id, 40, "MULTIPLE");
     await overdueMixed(algebra, "Problem Set 6", 3, 20, algebra.categories.homework.id, ortiz.user.id, [0, 2, 4]);
 
     await pastGraded(english, "Grammar Quiz", 6, 30, english.categories.tests.id, farah.user.id);
     await overdueMixed(english, "Essay: Personal Narrative", 2, 100, english.categories.projects.id, farah.user.id, [0, 2]);
-    await dueSoon(english, "Vocabulary Homework", 2, 15, english.categories.homework.id, 20);
+    await dueSoon(english, "Vocabulary Homework", 2, 15, english.categories.homework.id, 20, "LINK");
 
     await overdueMixed(history, "Reading Response: Chapter 4", 1, 25, history.categories.homework.id, reyes.user.id, [0, 2]);
     await dueSoon(history, "Map Quiz", 4, 40, history.categories.tests.id, 30);
@@ -474,6 +486,26 @@ async function main() {
     });
     await tx.resource.create({
       data: { schoolId: school.id, courseSectionId: biology.section.id, title: "Lab Safety Guide", url: "https://example.com/lab-safety", kind: "link" },
+    });
+    await tx.resource.create({
+      data: { schoolId: school.id, courseSectionId: algebra.section.id, title: "Chapter 3 Study Guide", url: "https://example.com/algebra-ch3", kind: "link" },
+    });
+    await tx.resource.create({
+      data: { schoolId: school.id, courseSectionId: english.section.id, title: "Narrative Essay Outline Template", url: "https://example.com/narrative-outline", kind: "link" },
+    });
+
+    // ── Class-level announcement (exercises COURSE_SECTION audience) ──
+    const labReminder = await tx.announcement.create({
+      data: {
+        schoolId: school.id,
+        authorId: smith.user.id,
+        title: "Lab Report due today",
+        body: "Reminder: the Photosynthesis lab report is due by 11:59 PM tonight. Office hours are open until 4pm if you have questions.",
+        publishAt: daysFromNow(0),
+      },
+    });
+    await tx.announcementAudience.create({
+      data: { announcementId: labReminder.id, audienceType: "COURSE_SECTION", courseSectionId: biology.section.id },
     });
 
     console.log("Seed complete.");

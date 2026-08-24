@@ -91,6 +91,31 @@ the client to be fetched again. It's also a direct, low-cost way to satisfy
 spec §48 ("clearly label demo accounts") without inventing a separate
 mechanism.
 
+## Class page tabs live in the URL, not component state
+
+`?tab=assignments` rather than a `useState` toggle.
+
+**Why:** Spec §3 calls out persistent state as a first-class requirement — "if a user... changes
+a view, their settings should persist when navigating away and coming back." A URL-driven tab is
+the simplest possible implementation of that: back/forward works, the tab survives a refresh, and
+it's a real link a student or teacher can share ("check the Gradebook tab") — none of which a
+client-side toggle gives you for free.
+
+## Grading is a queue with autosave-on-navigate, not a form-per-student
+
+Clicking "Save & Next" (or pressing →) always saves the current student's score before moving,
+even on the last submission in the queue where there's nowhere to navigate to. Losing a grade
+because a teacher hit the last item and the UI treated "no next" as "nothing to do" would be
+exactly the kind of silent data loss spec §29 (Reliability) rules out.
+
+## Undo is "restore the prior value," not a separate undo stack
+
+Grading writes the previous score/feedback to `GradeHistory` before overwriting, and "undo"
+restores the most recent history row. There's no separate undo/redo state machine to keep
+consistent with the actual data — the history table *is* the undo mechanism, and it's also a
+complete, inspectable audit trail (spec §13's "grade history" and "undo" turn out to be the same
+feature, not two).
+
 ## Empty states are written per-context, not "No data"
 
 E.g. "Nothing missing. Great work." / "Nothing waiting on you. Nice." /

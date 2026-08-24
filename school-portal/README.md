@@ -9,10 +9,14 @@ parents, and administrators today, not a clone of the incumbent's UI. See
 security front, and [`UX_DECISIONS.md`](./UX_DECISIONS.md) for the specific
 product decisions and why.
 
-**Status: Phase 1** — authentication, the database schema, multi-tenancy,
-role-based access control, and the student/teacher/parent/admin dashboards.
-See ARCHITECTURE.md §8 for the phase roadmap. This is a real, working
-application against a real Postgres database — not a mockup.
+**Status: Phase 2.** Phase 1 shipped authentication, the database schema,
+multi-tenancy, role-based access control, and the student/teacher/parent/admin
+dashboards. Phase 2 adds class pages, the full assignment lifecycle (create,
+submit with file/text/link, grade), a transparent grade-explanation page with
+a live what-if calculator, and a keyboard-driven teacher grading workflow with
+grade history/undo. See ARCHITECTURE.md §8–§9 for what's built and what's
+still ahead. This is a real, working application against a real Postgres
+database — not a mockup.
 
 ## Stack
 
@@ -77,7 +81,10 @@ The seed data includes a full school (Bright River Academy): 4 teachers, 6
 students, 4 course sections with real weekly schedules, a mix of graded,
 upcoming, and deliberately-missing assignments (so the "Missing" and
 "Students to check on" features have real data to show), attendance history,
-announcements, a soccer team, and course resources.
+announcements, a soccer team, course resources, and two rubric-graded
+assignments — including at least one ungraded submission per class, so
+`teacher@example.com` always has something real to grade in "Grade
+submissions" right after logging in.
 
 ## Testing
 
@@ -98,6 +105,7 @@ just documented, it's tested against the database engine itself.
 | `DATABASE_URL` | Main app connection string. This role is subject to row-level security on every tenant-scoped table. |
 | `DATABASE_URL_AUTH` | Least-privilege connection used only for the pre-authentication user lookup by email (`SELECT`-only on `User`, bypasses RLS since the tenant isn't known yet). Never used for anything else. |
 | `SESSION_SECRET` | Signs the session cookie (HS256). Must be a strong random value outside local dev. |
+| `UPLOADS_DIR` | Optional. Local filesystem directory for assignment submission uploads (default: `./uploads`). See `lib/storage/fileStorage.ts` — this is an interface with one implementation today, meant to be swapped for S3/Blob storage later without touching callers. |
 
 ## Deployment notes (Phase 1 scope)
 

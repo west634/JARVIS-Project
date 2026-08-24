@@ -115,9 +115,12 @@ an afterthought — the model was designed now specifically so it's ready.
 
 - **Distributed rate limiting.** Current limiter is per-process/in-memory;
   fine for one instance, not for a horizontally-scaled deployment.
-- **File upload scanning/validation.** No file uploads exist yet (Phase 2:
-  assignment submissions) — malware scanning and MIME/size validation need
-  to land with that feature, not be retrofitted.
+- **File upload malware scanning.** Assignment submission uploads (Phase 2)
+  are size-capped (25MB), filename-sanitized, and only ever served back
+  through the permission-checked `/api/files/[fileId]` route (never as a
+  static/public asset) — see `lib/storage/fileStorage.ts`. There is no
+  antivirus/content scanning yet; that needs to land before file uploads
+  are trusted from a school with real adversarial users, not before then.
 - **Session revocation list.** A stolen JWT is valid until it expires (7
   days) or the secret rotates; there's no server-side "log out everywhere"
   yet.
@@ -130,6 +133,15 @@ an afterthought — the model was designed now specifically so it's ready.
   to production and not reachable by user input. Tracked for the next
   Prisma point release rather than downgraded, which would have broken the
   Prisma 7 toolchain this project depends on.
+- **Cosmetic startup warning:** a single Node `DeprecationWarning` about
+  concurrent `pg` client queries prints once at server boot, before any
+  request is served and independent of traffic. It reproduces with zero
+  application queries in flight, so it's internal to the `pg`/adapter-pg
+  connection-pool warmup rather than a concurrency bug in this codebase's
+  query code (audited: every `withTenant` transaction in the app awaits its
+  queries sequentially, never `Promise.all`, and the tenant-isolation
+  integration test exercises real concurrent transactions without issue).
+  Left as a known, harmless startup log line rather than silently ignored.
 
 ## Privacy posture (FERPA/COPPA-oriented)
 
