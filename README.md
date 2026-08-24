@@ -1,3 +1,8 @@
+> **Note:** This repository also contains a second, unrelated project —
+> [`school-portal/`](./school-portal/), a K-12 school management and student
+> portal. See [`school-portal/README.md`](./school-portal/README.md) to get
+> started with it. Everything below this note is about SENTINEL.
+
 # SENTINEL — Voice-First AI Operations Shell
 
 An original, JARVIS-inspired AI assistant: a voice-first HUD that listens, reasons with an
