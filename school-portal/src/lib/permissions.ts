@@ -109,6 +109,13 @@ export function canTakeAttendance(
   return canGradeSubmission(user, target);
 }
 
+export function canManageClassSchedule(
+  user: MinimalUser,
+  target: { teacherUserId: string; schoolId: string },
+): boolean {
+  return canGradeSubmission(user, target);
+}
+
 export function canManageSchoolSettings(user: MinimalUser, schoolId: string): boolean {
   return isSameSchool(user, schoolId) && user.role === "ADMIN";
 }

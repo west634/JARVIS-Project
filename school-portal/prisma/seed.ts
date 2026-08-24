@@ -13,6 +13,17 @@ function daysFromNow(days: number, hour = 23, minute = 59): Date {
   return d;
 }
 
+/** Like daysFromNow, but nudges forward past weekends — for events tied to
+ * a Mon-Fri class, so re-running the seed on a different real-world date
+ * never lands a "test" on a Saturday or Sunday. */
+function nextWeekdayFromNow(days: number, hour = 23, minute = 59): Date {
+  const d = daysFromNow(days, hour, minute);
+  while (d.getDay() === 0 || d.getDay() === 6) {
+    d.setDate(d.getDate() + 1);
+  }
+  return d;
+}
+
 async function main() {
   const passwordHash = await bcrypt.hash("demo1234", 12);
 
@@ -443,8 +454,8 @@ async function main() {
         schoolId: school.id,
         title: "Biology Unit Test",
         category: "TEST",
-        startAt: daysFromNow(6, 9, 0),
-        endAt: daysFromNow(6, 9, 50),
+        startAt: nextWeekdayFromNow(6, 9, 0),
+        endAt: nextWeekdayFromNow(6, 9, 50),
         courseSectionId: biology.section.id,
       },
     });
@@ -469,6 +480,37 @@ async function main() {
         allDay: true,
       },
     });
+    await tx.calendarEvent.create({
+      data: {
+        schoolId: school.id,
+        title: "PTA Meeting",
+        category: "MEETING",
+        startAt: daysFromNow(2, 18, 30),
+        endAt: daysFromNow(2, 19, 30),
+        location: "Library",
+      },
+    });
+    await tx.calendarEvent.create({
+      data: {
+        schoolId: school.id,
+        title: "Science Fair",
+        category: "EVENT",
+        startAt: daysFromNow(10, 17, 0),
+        endAt: daysFromNow(10, 19, 30),
+        location: "Gymnasium",
+        description: "Student projects on display — families welcome.",
+      },
+    });
+    await tx.calendarEvent.create({
+      data: {
+        schoolId: school.id,
+        title: "Chess Club",
+        category: "CLUB",
+        startAt: daysFromNow(3, 15, 30),
+        endAt: daysFromNow(3, 16, 30),
+        location: "Room 110",
+      },
+    });
 
     // ── Activities / athletics ───────────────────────────────────────
     const soccer = await tx.activity.create({
@@ -479,6 +521,17 @@ async function main() {
     });
     await tx.teamMembership.create({ data: { teamId: soccerTeam.id, studentProfileId: weston.profile.id, role: "Captain" } });
     await tx.teamMembership.create({ data: { teamId: soccerTeam.id, studentProfileId: noah.profile.id, role: "Member" } });
+    await tx.calendarEvent.create({
+      data: {
+        schoolId: school.id,
+        title: "Varsity Soccer vs. Riverdale",
+        category: "ATHLETICS",
+        startAt: daysFromNow(7, 16, 30),
+        endAt: daysFromNow(7, 18, 0),
+        location: "Main Field",
+        teamId: soccerTeam.id,
+      },
+    });
 
     // ── Resources ────────────────────────────────────────────────────
     await tx.resource.create({
@@ -506,6 +559,82 @@ async function main() {
     });
     await tx.announcementAudience.create({
       data: { announcementId: labReminder.id, audienceType: "COURSE_SECTION", courseSectionId: biology.section.id },
+    });
+
+    // ── A past cancellation, so schedule/calendar have a real example ──
+    const pastEnglishTuesday = await tx.scheduleBlock.findFirst({
+      where: { courseSectionId: english.section.id, dayOfWeek: 2 },
+    });
+    if (pastEnglishTuesday) {
+      await tx.scheduleBlock.update({
+        where: { id: pastEnglishTuesday.id },
+        data: { isCancelled: true, cancelledDate: daysFromNow(-3, 0, 0), substituteName: "Ms. Patterson" },
+      });
+    }
+
+    // ── Sample message thread (parent <-> teacher, about Weston) ──────
+    const thread = await tx.messageThread.create({
+      data: { schoolId: school.id, subject: "Ecosystem Project — extension?", createdById: parentUser.id },
+    });
+    await tx.messageThreadParticipant.create({
+      data: { threadId: thread.id, userId: parentUser.id, lastReadAt: daysFromNow(0) },
+    });
+    await tx.messageThreadParticipant.create({
+      data: { threadId: thread.id, userId: smith.user.id },
+    });
+    await tx.message.create({
+      data: {
+        threadId: thread.id,
+        senderId: parentUser.id,
+        body: "Hi Dr. Smith — Weston was out sick Monday and Tuesday. Would it be possible to get a short extension on the Ecosystem Project?",
+        sentAt: daysFromNow(-1, 14, 0),
+      },
+    });
+    await tx.message.create({
+      data: {
+        threadId: thread.id,
+        senderId: smith.user.id,
+        body: "Of course — no problem at all. Let's say Friday instead. Hope he's feeling better!",
+        sentAt: daysFromNow(-1, 16, 30),
+      },
+    });
+
+    // ── Sample notifications (a mix of read/unread, matching real events) ──
+    await tx.notification.create({
+      data: {
+        schoolId: school.id,
+        userId: weston.user.id,
+        category: "GRADE",
+        title: "Grade posted: Cell Structure Quiz",
+        body: "Biology 9 — graded",
+        linkUrl: "/student/grades",
+        isRead: true,
+        createdAt: daysFromNow(-9, 8, 0),
+      },
+    });
+    await tx.notification.create({
+      data: {
+        schoolId: school.id,
+        userId: weston.user.id,
+        category: "SCHEDULE",
+        title: "English 9 cancelled",
+        body: "Tuesday — substitute: Ms. Patterson",
+        linkUrl: "/student/schedule",
+        isRead: false,
+        createdAt: daysFromNow(-3, 7, 30),
+      },
+    });
+    await tx.notification.create({
+      data: {
+        schoolId: school.id,
+        userId: weston.user.id,
+        category: "ASSIGNMENT",
+        title: "New assignment: Lab Report: Photosynthesis",
+        body: "Biology 9 — due today",
+        linkUrl: `/student/assignments/${(await tx.assignment.findFirstOrThrow({ where: { title: "Lab Report: Photosynthesis" } })).id}`,
+        isRead: false,
+        createdAt: daysFromNow(-3, 9, 0),
+      },
     });
 
     console.log("Seed complete.");

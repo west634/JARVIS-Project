@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth/guards";
 import { withTenant } from "@/lib/db";
 import { canGradeSubmission } from "@/lib/permissions";
+import { notifyUser } from "@/lib/notify";
 
 export type GradeActionResult = { error: string | null };
 
@@ -29,7 +30,8 @@ export async function gradeSubmissionAction(input: {
       const submission = await tx.submission.findUniqueOrThrow({
         where: { id: submissionId },
         include: {
-          assignment: { include: { courseSection: { include: { teacher: true } } }, },
+          assignment: { include: { courseSection: { include: { teacher: true, course: true } } } },
+          studentProfile: true,
           grade: true,
         },
       });
@@ -83,6 +85,14 @@ export async function gradeSubmissionAction(input: {
           before: submission.grade ? { score: submission.grade.score, feedback: submission.grade.feedback } : undefined,
           after: { score, feedback: feedback ?? "" },
         },
+      });
+
+      await notifyUser(tx, submission.studentProfile.userId, {
+        schoolId: session.schoolId,
+        category: "GRADE",
+        title: `Grade posted: ${submission.assignment.title}`,
+        body: `${submission.assignment.courseSection.course.name} — ${score}/${submission.assignment.points}`,
+        linkUrl: `/student/assignments/${submission.assignmentId}`,
       });
     });
   } catch (err) {

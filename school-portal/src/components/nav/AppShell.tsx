@@ -1,18 +1,23 @@
 import type { ReactNode } from "react";
 import { SidebarNav, type NavItem } from "@/components/nav/SidebarNav";
 import { LogoutButton } from "@/components/nav/LogoutButton";
+import { NotificationBell } from "@/components/nav/NotificationBell";
 
 export function AppShell({
   navItems,
   userName,
   roleLabel,
   isDemo,
+  notificationsHref,
+  unreadCount,
   children,
 }: {
   navItems: NavItem[];
   userName: string;
   roleLabel: string;
   isDemo: boolean;
+  notificationsHref: string;
+  unreadCount: number;
   children: ReactNode;
 }) {
   return (
@@ -34,9 +39,15 @@ export function AppShell({
             Demo account — sample data for development purposes only.
           </div>
         )}
-        <div className="flex items-center justify-between border-b border-black/8 px-6 py-3 md:hidden dark:border-white/10">
-          <p className="text-sm font-medium">{userName}</p>
-          <LogoutButton />
+        <div className="flex items-center justify-between border-b border-black/8 px-6 py-3 dark:border-white/10">
+          <p className="text-sm font-medium md:hidden">{userName}</p>
+          <span className="hidden md:block" />
+          <div className="flex items-center gap-2">
+            <NotificationBell href={notificationsHref} unreadCount={unreadCount} />
+            <span className="md:hidden">
+              <LogoutButton />
+            </span>
+          </div>
         </div>
         <main className="px-6 py-8">{children}</main>
       </div>

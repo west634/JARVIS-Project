@@ -514,11 +514,12 @@ model MessageThread {
 }
 
 model MessageThreadParticipant {
-  id       String        @id @default(cuid())
-  threadId String
-  thread   MessageThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
-  userId   String
-  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id         String        @id @default(cuid())
+  threadId   String
+  thread     MessageThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lastReadAt DateTime?
 
   @@unique([threadId, userId])
   @@index([userId])

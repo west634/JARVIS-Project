@@ -9,14 +9,18 @@ parents, and administrators today, not a clone of the incumbent's UI. See
 security front, and [`UX_DECISIONS.md`](./UX_DECISIONS.md) for the specific
 product decisions and why.
 
-**Status: Phase 2.** Phase 1 shipped authentication, the database schema,
+**Status: Phase 3.** Phase 1 shipped authentication, the database schema,
 multi-tenancy, role-based access control, and the student/teacher/parent/admin
-dashboards. Phase 2 adds class pages, the full assignment lifecycle (create,
+dashboards. Phase 2 added class pages, the full assignment lifecycle (create,
 submit with file/text/link, grade), a transparent grade-explanation page with
 a live what-if calculator, and a keyboard-driven teacher grading workflow with
-grade history/undo. See ARCHITECTURE.md §8–§9 for what's built and what's
-still ahead. This is a real, working application against a real Postgres
-database — not a mockup.
+grade history/undo. Phase 3 adds a unified Day/Week/Month/Agenda calendar, a
+weekly schedule view with teacher-initiated class cancellations, real-time
+in-app notifications (generated on assignment/grade/schedule/message events,
+with per-category preferences), and school-safe messaging with a
+relationship-scoped contact list. See ARCHITECTURE.md §8–§10 for what's built
+and what's still ahead. This is a real, working application against a real
+Postgres database — not a mockup.
 
 ## Stack
 
@@ -81,10 +85,12 @@ The seed data includes a full school (Bright River Academy): 4 teachers, 6
 students, 4 course sections with real weekly schedules, a mix of graded,
 upcoming, and deliberately-missing assignments (so the "Missing" and
 "Students to check on" features have real data to show), attendance history,
-announcements, a soccer team, course resources, and two rubric-graded
-assignments — including at least one ungraded submission per class, so
-`teacher@example.com` always has something real to grade in "Grade
-submissions" right after logging in.
+announcements, a soccer team, course resources, two rubric-graded
+assignments, a calendar full of tests/meetings/athletics/holidays/clubs, a
+past class cancellation with a substitute teacher, a sample parent↔teacher
+message thread, and a mix of read/unread notifications — including at least
+one ungraded submission per class, so `teacher@example.com` always has
+something real to grade in "Grade submissions" right after logging in.
 
 ## Testing
 

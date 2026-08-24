@@ -40,6 +40,24 @@ checklist. Anything not yet built is called out explicitly under "Known gaps."
   Next.js docs for Proxy call out exactly this failure mode (a matcher gap
   or refactor silently removing coverage), so every protected layout and
   Server Action independently re-verifies the session.
+- **Messaging (Phase 3) enforces `canMessage` twice, on purpose.**
+  `lib/services/contacts.ts#getContactableUsers` only ever *lists*
+  relationship-scoped contacts (a teacher's actual students and their
+  linked guardians, a parent's child's actual teachers, never another
+  student, never a bare school directory for non-admins) — but that's a UX
+  courtesy, not the enforcement. `lib/actions/messagingActions.ts#createThreadAction`
+  independently re-checks `canMessage` for every recipient server-side
+  before creating the thread, so a crafted POST with a recipient ID outside
+  what the UI would ever show is still rejected.
+- **A client/server boundary bug this phase caught at build time, not
+  silently.** A Client Component originally imported a plain constant from
+  a `"server-only"` service module that pulls in `pg` — this fails the
+  production build outright (missing Node builtins in the browser bundle)
+  rather than shipping. Fixed by moving client-safe types/constants into a
+  dependency-free module (`lib/notificationTypes.ts`). Documented here
+  because it's a real instance of the framework's build step acting as a
+  genuine safety net for the server/client trust boundary, not just a
+  type-checking nicety — see ARCHITECTURE.md §9 for the full story.
 
 ## Multi-tenancy (row-level security)
 
@@ -124,6 +142,13 @@ an afterthought — the model was designed now specifically so it's ready.
 - **Session revocation list.** A stolen JWT is valid until it expires (7
   days) or the secret rotates; there's no server-side "log out everywhere"
   yet.
+- **Push/email/SMS notification delivery.** `NotificationPreference` models
+  all four channels from spec §20, and the preferences UI lets a user
+  toggle them, but only `IN_APP` actually gates whether a `Notification`
+  row gets written — there is no push/email/SMS provider wired up. A school
+  relying on those channels for anything urgent (spec's `EMERGENCY`
+  category) should not assume delivery beyond the in-app center until a
+  real provider is connected.
 - **Security headers (CSP, HSTS, etc.)** are not yet configured in
   `next.config.ts` — planned for the Phase 7 hardening pass alongside a
   proper accessibility and performance audit.

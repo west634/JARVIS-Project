@@ -1,0 +1,17 @@
+import { requireRole } from "@/lib/auth/guards";
+import { getNotifications } from "@/lib/services/notifications";
+import { NotificationList } from "@/components/notifications/NotificationList";
+
+export default async function TeacherNotificationsPage() {
+  const session = await requireRole("TEACHER");
+  const notifications = await getNotifications(session.schoolId, session.userId);
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight">Notifications</h1>
+      </div>
+      <NotificationList notifications={notifications} preferencesHref="/teacher/notifications/preferences" />
+    </div>
+  );
+}

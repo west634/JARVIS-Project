@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth/guards";
 import { withTenant } from "@/lib/db";
 import { canCreateAssignment } from "@/lib/permissions";
+import { notifyUsers } from "@/lib/notify";
 
 const createSchema = z.object({
   courseSectionId: z.string().min(1),
@@ -52,7 +53,11 @@ export async function createAssignmentAction(
     await withTenant(session.schoolId, async (tx) => {
       const section = await tx.courseSection.findUniqueOrThrow({
         where: { id: data.courseSectionId },
-        include: { teacher: true },
+        include: {
+          teacher: true,
+          course: true,
+          enrollments: { include: { studentProfile: true } },
+        },
       });
       if (!canCreateAssignment(session, { teacherUserId: section.teacher.userId, schoolId: session.schoolId })) {
         throw new Error("You don't have permission to create an assignment in this class.");
@@ -97,6 +102,17 @@ export async function createAssignmentAction(
         },
       });
 
+      await notifyUsers(
+        tx,
+        section.enrollments.map((e) => e.studentProfile.userId),
+        {
+          schoolId: session.schoolId,
+          category: "ASSIGNMENT",
+          title: `New assignment: ${data.title}`,
+          body: `${section.course.name} — due ${dueDate.toLocaleDateString(undefined, { month: "short", day: "numeric" })}`,
+          linkUrl: `/student/assignments/${assignment.id}`,
+        },
+      );
     });
   } catch (err) {
     return { error: err instanceof Error ? err.message : "Couldn't create the assignment." };

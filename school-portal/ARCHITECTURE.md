@@ -198,9 +198,58 @@ Built on top of the Phase 1 foundation without changing it:
   `lib/notFound.ts#withNotFoundOn404`, which turns Prisma's P2025 into Next's `notFound()` — a
   clean 404 page, never a raw stack trace, whether the ID is bogus or just someone else's.
 
-## 9. Roadmap (phases 3–7, not built yet)
+## 9. Phase 3: calendar, schedule, notifications, messaging
 
-Matches the spec's phased plan: Phase 3 (calendar/schedule/notifications/messaging), Phase 4
-(parent portal depth, athletics, announcements), Phase 5 (AI features), Phase 6
-(analytics/import-export/integrations), Phase 7 (perf/accessibility/security/mobile polish). Each
-phase builds on the service-layer boundary established in Phase 1 rather than bypassing it.
+- **Calendar** (`lib/services/calendarLogic.ts` + `lib/services/calendar.ts`) separates pure date
+  math (recurring-schedule expansion, month/week grids, view date ranges — all unit tested, zero
+  DB/framework imports) from the DB-backed merge of three sources into one `CalendarItem[]`:
+  `CalendarEvent` rows, assignment due dates, and `ScheduleBlock` occurrences expanded across the
+  requested range. Day/Week/Month/Agenda views and date navigation are plain links
+  (`?view=&date=`), so — like the assignment filters and class tabs before it — the view survives
+  back/forward and refresh for free. Clicking an event opens a contextual detail panel (a small
+  client component) instead of a full page navigation, per spec §11.
+- **Schedule** (`lib/services/schedule.ts`) is deliberately a different view of the same
+  `ScheduleBlock` data: a generic weekly timetable template plus "right now / next up," not a
+  dated view. A specific day's cancellation (`ScheduleBlock.isCancelled`/`cancelledDate`) only
+  shows inline on the timetable when that day is today — the Calendar is where a *future* specific
+  cancellation shows correctly, because it's already expanding concrete dated occurrences. Two
+  views, two different jobs, deliberately not merged into one.
+- **Notifications** (`lib/notify.ts` for writing, `lib/services/notifications.ts` for reading) are
+  generated at the point of the real event, not batched: `assignmentActions.ts` notifies every
+  enrolled student on assignment creation, `gradingActions.ts` notifies the student when a grade
+  posts, `scheduleActions.ts` notifies enrolled students on a class cancellation, and
+  `messagingActions.ts` notifies recipients on a new thread or reply. `notifyUser`/`notifyUsers`
+  always run inside the caller's existing tenant transaction (never open their own), and check the
+  recipient's `NotificationPreference` before writing — defaulting to enabled so a school never
+  silently drops a grade/assignment notice because no preference row exists yet. Only the `IN_APP`
+  channel is wired to real delivery; `PUSH`/`EMAIL`/`SMS` preferences are stored (spec §20 asks for
+  the categories/channels model) but have no delivery backend behind them yet — see SECURITY.md
+  and README for what that means honestly, not aspirationally.
+- **Messaging** (`lib/services/contacts.ts`, `lib/services/messaging.ts`,
+  `lib/actions/messagingActions.ts`) keeps the "school-safe" constraint from `lib/permissions.ts`
+  (`canMessage`) enforced twice: once by only ever *listing* real, relationship-scoped contacts
+  (a teacher's actual students and their guardians, a parent's child's actual teachers — never the
+  whole directory, and never another student), and again by re-checking `canMessage` server-side
+  on send, so the contact list being scoped correctly is a UX nicety, not the security boundary.
+  Read state is a `lastReadAt` timestamp per `MessageThreadParticipant`, not a boolean — viewing a
+  thread is what marks it read, matching how the notification center's "unread" also works off a
+  comparison rather than a flag that could drift.
+
+### A client/server boundary bug this phase caught
+
+`NOTIFICATION_CATEGORIES` (a plain array) was originally exported from `lib/services/notifications.ts`,
+a `"server-only"` module that imports `lib/db.ts` (and therefore `pg`). The preferences form is a
+Client Component and imported it directly — which failed the production build, not silently: bundling
+`pg` for the browser fails on missing Node builtins (`net`, `tls`, …). Fixed by extracting the
+client-safe types/constants into `lib/notificationTypes.ts`, which has no server/database
+dependency, and having the server module re-export from it. The general rule this establishes:
+**a Client Component may import `type`s from a `lib/services/*.ts` file, but never a runtime value**
+— any shared constant/enum-array a client component needs belongs in a plain, dependency-free
+module instead.
+
+## 10. Roadmap (phases 4–7, not built yet)
+
+Matches the spec's phased plan: Phase 4 (parent portal depth, athletics, announcements), Phase 5
+(AI features), Phase 6 (analytics/import-export/integrations), Phase 7
+(perf/accessibility/security/mobile polish). Each phase builds on the service-layer boundary
+established in Phase 1 rather than bypassing it.

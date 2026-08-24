@@ -116,6 +116,40 @@ consistent with the actual data — the history table *is* the undo mechanism, a
 complete, inspectable audit trail (spec §13's "grade history" and "undo" turn out to be the same
 feature, not two).
 
+## Calendar clicks open a panel, never a page
+
+Clicking an event anywhere in the calendar (month grid, week, agenda) opens an in-place detail
+panel with an "Open →" link, rather than navigating straight to the assignment/class page.
+
+**Why:** Spec §11 explicitly asks for this ("Clicking an event should open a contextual detail
+panel instead of forcing unnecessary navigation"). It also means glancing at what a day holds
+costs one click, not a full round trip and back button, for every item that isn't the one you
+actually wanted to open.
+
+## The weekly Schedule and the Calendar deliberately disagree on what "cancelled" means
+
+Schedule shows a cancellation only when it's *today*; Calendar shows it correctly on whatever
+future date it's for.
+
+**Why:** Schedule answers "what does a normal week look like," so a one-off cancellation three
+weeks out has no natural place in a template view — showing it there would make the template
+itself look wrong every time you glanced at it before that date. Calendar already renders
+concrete dated occurrences, so it's the correct place to see a specific future change. Rather than
+force one view to do both jobs (and get neither quite right), each view answers the one question
+it's actually good at. The notification sent at cancellation time is what makes sure the change
+isn't missed regardless of which view someone happens to check.
+
+## Messaging's contact list is the permission boundary made visible, not just enforced invisibly
+
+A student composing a new message only ever sees their actual teachers (plus admins) as
+selectable recipients — never a school directory, never other students.
+
+**Why:** `canMessage` (spec §21: "school-safe messaging... avoid creating an unrestricted social
+network") is still checked again server-side on send, so this isn't the only enforcement. But
+showing only who you're actually allowed to reach, instead of showing everyone and rejecting the
+send after the fact, means the constraint reads as "this is who you can talk to," not "you did
+something wrong."
+
 ## Empty states are written per-context, not "No data"
 
 E.g. "Nothing missing. Great work." / "Nothing waiting on you. Nice." /
